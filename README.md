@@ -182,3 +182,50 @@ A basic termination of a Kubernetes pod looks like the following.
         }
     ]
 
+Inside a method block, actions may be defined to *change the system state*, i.e., injecting failures. The *chaostoolkit-kubernetes* extension provides a set of experiments that may be used to run chaos experiments (see [official documentation](https://docs.chaostoolkit.org/drivers/kubernetes/)).
+
+The respective Kubernetes CTK provider uses the module "chaosk8s.pod.actions" for pod actions, e.g., termination. Inside the provider, you can pass different arguments to select Kubernetes pods.  
+
+    "arguments": {
+                    "label_selector": "app=<label-of-application>",
+                    "mode": "fixed",
+                    "qty": 1,
+                    "ns": "default"
+                }
+
+In this case, I used four different arguments. 
+
+1. label_selector – Determines a specific pod by its label
+2. mode – distinguishes the mode on how to select pods. Can either be "fixed" or "percentage"
+3. qty – Quantity of pods to select. By default set to "1"
+4. ns – Determines the namespace where the pods are assigned to
+
+Based on the above explanation, this experiments will select a specific pod based on the label_selector and gracefully terminates it. By default, the pod_termination provided by CTK, terminates a pod gracefully, i.e., a currently running process inside the pod is allowed to finish before the pod is terminated. Other options to terminate pods include:
+
+- rand – If set to TRUE, "n" random pods will be terminated
+- all – Terminates all retrieved pods
+- mode="percentage" – Terminates a given percentage of pods in range of 1 to 100 specified by "qty"
+- grace_period – Determines a grace period before a pod is terminated
+- order – Provides a order on how to terminate retrieved pods
+
+### Randomized Approaches
+
+In the following, I will demonstrate an experiment to terminate a number of Kubernetes pods based on a percentage range.
+
+            {
+                "type": "action",
+                "name": "kill-microservice",
+                "provider": {
+                    "module": "chaosk8s.pod.actions",
+                    "type": "python",
+                    "arguments": {
+                        "label_selector": "app=<label-of-application>",
+                        "mode": "percentage",
+                        "qty": 25,
+                        "ns": "default"
+                    },
+                    "func": "terminate_pods"
+                }
+            }
+
+The above provider shows a different *mode* property. *Mode* is set to "percentage". This requires the *qty* property to be a value between 0 and 100. In this case, *qty* is set to 25, i.e., 25% of the retrieved Kubernetes pods will be terminated. Note, that I also specified a label_selector. This comes in handy if 

@@ -92,8 +92,93 @@ in order to get familiar with the CLI. The above command will serve
     run       Run the experiment loaded from SOURCE, either a local file or a...
     validate  Validate the experiment at PATH.
 
-## Using Environment Variables
+# Using Environment Variables
 
--- TODO
+Currently the environment variables are not working due to some unknown issue (probably based on the CTK).
+Hence, this functionality is postponed.  
 
-### Troubleshooting
+# Experiment description
+
+Currently, there are three experiments with respect to a Kubernetes cluster.
+
+- basic-healthcheck-sl.json
+- basic-pod-termination-norand.json
+- basic-pod-termination-randomperc.json
+
+Note, that these experiments currently contain secrets that are required to access the target application. However, other than that, the residual content of the experiments is quite generic and may be applied to any other Kubernetes cluster. You may, however, change the label selectors if you wish to run experiments on specific pods. 
+
+## Steady-State hypothesis
+
+The steady-state hypothesis is based on a simple *cURL* request that expects an HTTP status code *200* in order to be flagged as successful.
+
+The request is specified as follows.
+
+    "steady-state-hypothesis": {
+            "title": "Healthcheck",
+            "probes": [
+                {
+                    "type": "probe",
+                    "name": "application-must-respond",
+                    "tolerance": 200,
+                    "provider": {
+                        "secrets": [
+                            "login"
+                        ],
+                        "type": "http",
+                        "url": "http://dev-dke.kundenplattform.plattform.cloud/space/#/start",
+                        "headers": {
+                            "Authorization": "${bearer}"
+                        }
+                    }
+                }
+            ]
+        }
+
+A steady-state hypothesis contains a number of probes that query the state of the system. No system changes will be injected in this phase. 
+
+Currently, the steady-state hypothesis contains only one probe that will query the landing page of the customer platform. As in a basic *cURL* issued from the shell, the http probe provided by CTK can be customized if required, i.e., setting http headers and such. 
+
+In this case, accessing the landing page requires a login with a *username* and *password*. These are set specifically in a secrets block outside of the steady-state hypothesis but may be passed to the probe in the *provider* section. A secret block may look like the following.
+
+    "secrets": {
+        "login": {
+            "username": "Admin",
+            "password": "Start123"
+        },
+        "bearer": {
+            "token": "Bearer ...
+        }
+    }
+
+## Generic Methods
+
+In the following, I will demonstrate the generic approaches to test a Kubernetes cluster. Consider, that more complex experiments are possible. I will observe potential changes in the cluster by using 
+
+        $ kubectl watch get all
+
+Note, that good chaos engineering requires proper monitoring solutions in order to get better results.
+
+### Non-randomized approaches
+
+Randomized chaos engineering is practices since this method has been published by Netflix. However, current research aims to demonstrate that combining randomized with non-randomized approaches yields better results in terms of efficiency and found weaknesses. 
+
+A basic termination of a Kubernetes pod looks like the following.
+
+    "method": [
+        {
+            "type": "action",
+            "name": "kill-microservice",
+            "provider": {
+                "module": "chaosk8s.pod.actions",
+                "type": "python",
+                "arguments": {
+                    "label_selector": "app=",
+                    "mode": "fixed",
+                    "qty": 1,
+                    "ns": "default"
+                },
+                "func": "terminate_pods"
+            }
+        }
+    ]
+

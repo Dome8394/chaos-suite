@@ -1,0 +1,93 @@
+{
+    "version": "1.0.0",
+    "title": "Randomized termination with percentage",
+    "description": "Terminates random pods based on a given percentage on the retrieved pods in a given namespace.",
+    "tags": [
+        "suedleasing",
+        "resilience"
+    ],
+    "secrets": {
+        "login": {
+            "username": "Admin",
+            "password": "Start123"
+        },
+        "bearer": {
+            "token": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJHaFJvaUpSYmxGaGpTZXNBWmF4bW03VFh5Y3RsT1RVR3RRek5tR2Q3Y1owIn0.eyJqdGkiOiIwZjRjZjdhOC01ODA1LTRhYWQtYmVhOC1jYzZmZTRmODQ4OGYiLCJleHAiOjE1OTU0Mjk4MjgsIm5iZiI6MCwiaWF0IjoxNTk1NDA4MjI4LCJpc3MiOiJodHRwOi8vZGV2LWRrZS5rdW5kZW5wbGF0dGZvcm0ucGxhdHRmb3JtLmNsb3VkL2F1dGgvcmVhbG1zL3NsIiwiYXVkIjpbInNwYWNlLXVpIiwiYWNjb3VudCJdLCJzdWIiOiJkZGFiZDdiNC0zZjZkLTQ1ODctYWRkNS0zNzg4ZDBlNzE2ZTAiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJzcGFjZS11aSIsIm5vbmNlIjoiQjd2NFVWdER3TTRnVEg4WVBPeFNYcVhPdGpWQ0pUVVhOV3c5Q0RHNU9ZSmJfIiwiYXV0aF90aW1lIjoxNTk1NDA4MjI4LCJzZXNzaW9uX3N0YXRlIjoiMjk0NDg0NzAtYzA3Yy00OTJkLThmMzEtNTM5NzFiZDFiZTZmIiwiYWNyIjoiMSIsInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsic3BhY2UtdWkiOnsicm9sZXMiOlsiVkNfVklEIiwiVkNfQkVOVVRaRVIiLCJWQ19GQkwiLCJWQ19GMVZNIiwiVkNfRjFWIiwiVkNfRjJWIiwiVkNfVk1ORyJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6IkFkbWluIFVzZXIiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhZG1pbiIsImdpdmVuX25hbWUiOiJBZG1pbiIsImZhbWlseV9uYW1lIjoiVXNlciIsImVtYWlsIjoiYWRtaW5AcGxhdHRmb3JtLmNsb3VkIn0.n5C9mmZLGjIX5RNnbf386OJmdxXvd3kzgoFn-gVkymjue-z13VYOVLEF7ur-MDQcdSd_tq83a92pF_ESioJkyJt_EEZ27DvfXAiu7lL4JpQkBzrlvQjkdn4dnGqOQM07a1x3nk48t-OqErf4bL0ZSszYX9zENqc9XZRyXScqaGmwBIX27lrEsScUAkjbl2tGXplq4LZiiZlfHCG5Pl6KZgqOOfilLfMVxYegYFGGDnOd1MoZzqQ6KbpyPw1iKYYj0Q_EBK5xv8DT6KfiZoaLHG2AVmqRp5J09Xfs9UDTh_akROYJxPwDcXIKuzzzGys23duzw9jB_O5d_Vliun0CQw"
+        }  
+    },
+    "steady-state-hypothesis": {
+        "title": "Healthcheck",
+        "probes": [
+            {
+                "type": "probe",
+                "name": "application-must-respond",
+                "tolerance": 200,
+                "provider": {
+                    "secrets": ["login"],
+                    "type": "http",
+                    "url": "http://dev-dke.kundenplattform.plattform.cloud/space/#/start",
+                    "headers": {
+                        "Authorization": "${bearer}"
+                    }
+                }
+            }
+        ]
+    },
+    "method": [
+        {
+            "type": "action",
+            "name": "kill-microservice",
+            "provider": {
+              "module": "chaosk8s.pod.actions",
+              "type": "python",
+              "arguments": {
+                "label_selector": "",
+                "mode": "percentage",
+                "qty": 25,
+                "ns": "default"
+              },
+              "func": "terminate_pods"
+            }
+          },
+        {
+            "pause": 60
+        },
+        {
+            "type": "action",
+            "name": "kill-microservice",
+            "provider": {
+                "module": "chaosk8s.pod.actions",
+                "type": "python",
+                "arguments": {
+                    "label_selector": "",
+                    "mode": "percentage",
+                    "qty": 50,
+                    "ns": "default"
+                },
+                "func": "terminate_pods"
+            }
+        },
+        {
+            "pause": 90
+        },
+        {
+            "type": "action",
+            "name": "kill-microservice",
+            "provider": {
+                "module": "chaosk8s.pod.actions",
+                "type": "python",
+                "arguments": {
+                    "label_selector": "",
+                    "mode": "percentage",
+                    "qty": 75,
+                    "ns": "default"
+                },
+                "func": "terminate_pods"
+            }
+        },
+        {
+            "pause": 120
+        }
+    ],
+    "rollbacks": []
+}
